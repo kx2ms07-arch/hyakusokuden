@@ -223,8 +223,8 @@ PLAY.view={
     const card=app.querySelector('.card');let x0=null;
     card.addEventListener('touchstart',e=>{x0=e.touches[0].clientX;},{passive:true});
     card.addEventListener('touchend',e=>{if(x0==null)return;const dx=e.changedTouches[0].clientX-x0;x0=null;
-      // 縦書きの本は右から左へめくるので、右へスワイプで次の首
-      if(dx>50)PLAY.view.next();else if(dx<-50&&G.i>0){G.i--;render();}});
+      // ボタン（次の首 ›）と同じ向き：指を左へ払うと次の首、右へ払うと前の首
+      if(dx<-50)PLAY.view.next();else if(dx>50&&G.i>0){G.i--;render();}});
   },
   next(){if(G.i<G.list.length-1){G.i++;render();}else finish({pass:true,lines:[G.list.length+'首を読みました。']});}
 };

@@ -1,6 +1,6 @@
 // 百足伝学習アプリ Service Worker
 // 更新したら CACHE の版を上げる
-const CACHE = 'hyakusokuden-v1';
+const CACHE = 'hyakusokuden-v2';
 const FILES = ['./','./index.html','./app.js','./data/poems.json','./data/titles.json','./manifest.webmanifest','./icons/icon-180.png','./icons/icon-192.png','./icons/icon-512.png','./icons/icon-b.svg'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES)).then(() => self.skipWaiting())); });
 self.addEventListener('activate', e => { e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim())); });
