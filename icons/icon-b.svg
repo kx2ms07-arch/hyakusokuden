@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 180" role="img" aria-label="百足伝 水に映る月">
+  <defs><clipPath id="bw"><rect x="0" y="112" width="180" height="68"/></clipPath></defs>
+  <rect width="180" height="180" fill="#16243a"/>
+  <rect x="0" y="112" width="180" height="68" fill="#1d3150"/>
+  <circle cx="90" cy="68" r="30" fill="#e8d6a0"/>
+  <g clip-path="url(#bw)" fill="#e8d6a0" opacity=".55">
+    <rect x="66" y="124" width="48" height="4" rx="2"/><rect x="72" y="136" width="36" height="4" rx="2"/><rect x="78" y="148" width="24" height="4" rx="2"/><rect x="84" y="160" width="12" height="3" rx="1.5"/>
+  </g>
+  <line x1="22" y1="112" x2="158" y2="112" stroke="#8fb1d9" stroke-width="1.2" opacity=".7"/>
+</svg>

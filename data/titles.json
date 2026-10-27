@@ -1,0 +1,135 @@
+{
+ "note": "称号の名前・由来・条件文・判定ルール。rule.type: played / countLv / passed / streak / chainRun",
+ "titles": [
+  {
+   "id": "t1",
+   "name": "清水の末",
+   "from": "第一首",
+   "cond": "初めて学習する",
+   "rule": {
+    "type": "played"
+   }
+  },
+  {
+   "id": "t2",
+   "name": "浮き雲",
+   "from": "第六首",
+   "cond": "10首を「学習中」以上にする",
+   "rule": {
+    "type": "countLv",
+    "level": 1,
+    "count": 10
+   }
+  },
+  {
+   "id": "t3",
+   "name": "栃殻",
+   "from": "第七首",
+   "cond": "壱の巻を段階6まで合格",
+   "rule": {
+    "type": "passed",
+    "all": [
+     [
+      1,
+      6
+     ]
+    ]
+   }
+  },
+  {
+   "id": "t4",
+   "name": "浮島の松",
+   "from": "第十一首",
+   "cond": "7日連続で稽古",
+   "rule": {
+    "type": "streak",
+    "days": 7
+   }
+  },
+  {
+   "id": "t5",
+   "name": "雲井の月",
+   "from": "第八首",
+   "cond": "弐の巻を段階6まで合格",
+   "rule": {
+    "type": "passed",
+    "all": [
+     [
+      2,
+      6
+     ]
+    ]
+   }
+  },
+  {
+   "id": "t6",
+   "name": "一圓",
+   "from": "第十首",
+   "cond": "連鎖で一度に20首続ける",
+   "rule": {
+    "type": "chainRun",
+    "min": 20
+   }
+  },
+  {
+   "id": "t7",
+   "name": "心の月",
+   "from": "第十二首",
+   "cond": "参の巻を段階6まで合格",
+   "rule": {
+    "type": "passed",
+    "all": [
+     [
+      3,
+      6
+     ]
+    ]
+   }
+  },
+  {
+   "id": "t8",
+   "name": "利剣",
+   "from": "第二十四首",
+   "cond": "四の巻を段階6まで合格",
+   "rule": {
+    "type": "passed",
+    "all": [
+     [
+      4,
+      6
+     ]
+    ]
+   }
+  },
+  {
+   "id": "t9",
+   "name": "苔の雫に宿る月影",
+   "from": "第三十七首",
+   "cond": "40首すべてを「習得」にする",
+   "rule": {
+    "type": "countLv",
+    "level": 5,
+    "count": 40
+   }
+  },
+  {
+   "id": "t10",
+   "name": "もとの初心",
+   "from": "第四十首",
+   "cond": "通しの連鎖と抜き打ちを、それぞれノーミスで達成",
+   "rule": {
+    "type": "passed",
+    "all": [
+     [
+      5,
+      5
+     ],
+     [
+      5,
+      6
+     ]
+    ]
+   }
+  }
+ ]
+}
