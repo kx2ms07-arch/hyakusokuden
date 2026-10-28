@@ -6,15 +6,21 @@ const SECTIONS = [
   {id:4,name:'四の巻',range:'第三十一首〜第四十首',from:31,to:40},
   {id:5,name:'通し',range:'第一首〜第四十首',from:1,to:40}
 ];
+// key：合格の記録先。数字は段階そのもの、文字は段階内の追加モード
 const MODES = [
-  {id:'view',stage:1,name:'閲覧',desc:'一首ずつ読んで覚える',pass:'最後の首まで読む'},
-  {id:'choice',stage:2,name:'下の句選び',desc:'上の句に続く下の句を4択で選ぶ',pass:'正答率90%以上'},
-  {id:'order',stage:4,name:'並べ替え',desc:'文節の札を正しい順に取る',pass:'ミス2回以内'},
-  {id:'chain',stage:5,name:'連鎖',desc:'最初の首から順に組み続ける（ミス3回で終了）',pass:'最後までノーミス'},
-  {id:'recall',stage:6,name:'抜き打ち',desc:'順不同の上の句から、下の句を思い出す',pass:'すべて「言えた」'}
+  {id:'view',stage:1,key:1,name:'閲覧',desc:'一首ずつ読んで覚える',pass:'最後の首まで読む'},
+  {id:'choice',stage:2,key:2,name:'下の句選び',desc:'上の句に続く下の句を4択で選ぶ',pass:'正答率90%以上（段階二の合格）'},
+  {id:'number',stage:2,key:'number',name:'番号当て',desc:'歌を見て番号を、番号を見て上の句を4択で選ぶ',pass:'正答率90%以上'},
+  {id:'fill',stage:3,key:3,name:'穴埋め',desc:'伏せた文節を選んで埋める（1か所・半分・全部）',pass:'「全部」で正答率90%以上'},
+  {id:'order',stage:4,key:4,name:'並べ替え',desc:'文節の札を正しい順に取る',pass:'ミス2回以内（次の巻の解放）'},
+  {id:'next',stage:5,key:'next',name:'次の首当て',desc:'歌を見て、次の首の上の句を4択で選ぶ',pass:'正答率90%以上'},
+  {id:'chain',stage:5,key:5,name:'連鎖',desc:'最初の首から順に組み続ける（ミス3回で終了）',pass:'最後までノーミス（段階五の合格）'},
+  {id:'recite',stage:6,key:'recite',name:'通し暗唱',desc:'番号だけを見て頭の中で暗唱し、答え合わせする',pass:'すべて「言えた」'},
+  {id:'recall',stage:6,key:6,name:'抜き打ち',desc:'順不同の上の句から、下の句を思い出す',pass:'すべて「言えた」'}
 ];
+const STAGE_NAME = {1:'知る',2:'つなぐ',3:'埋める',4:'組み立てる',5:'続ける',6:'暗唱'};
 const KANJI = ['〇','一','二','三','四','五','六','七','八','九','十'];
-const STAGE_KANJI = {1:'一',2:'二',4:'四',5:'五',6:'六'};
+const STAGE_KANJI = {1:'一',2:'二',3:'三',4:'四',5:'五',6:'六'};
 const INTERVAL = [0,0,1,3,7,14];
 const LV_NAME = ['未学習','学習中','学習中','学習中','定着','習得'];
 let TITLES = [];
@@ -54,8 +60,11 @@ function countLv(min){let c=0;for(let n=1;n<=40;n++)if(pget(n).lv>=min)c++;retur
 function dueList(){const t=today();const r=[];for(let n=1;n<=40;n++){const p=pget(n);if(p.lv>=1&&p.due&&p.due<=t)r.push(n);}return r;}
 function markDay(){const t=today();if(!S.days.includes(t))S.days.push(t);}
 function streak(){let d=today();if(!S.days.includes(d))d=addDays(d,-1);let c=0;while(S.days.includes(d)){c++;d=addDays(d,-1);}return c;}
-function passed(sec,stage){return !!(S.stages[sec]&&S.stages[sec][stage]);}
-function setPassed(sec,stage){S.stages[sec]=S.stages[sec]||{};const was=!!S.stages[sec][stage];S.stages[sec][stage]=true;return !was;}
+function rawPassed(sec,key){return !!(S.stages[sec]&&S.stages[sec][key]);}
+// 段階の合格。段階六は「通し暗唱」と「抜き打ち」の両方が必要
+function passed(sec,stage){if(stage===6)return rawPassed(sec,6)&&rawPassed(sec,'recite');return rawPassed(sec,stage);}
+function modePassed(sec,mode){return rawPassed(sec,mode.key);}
+function setPassed(sec,key){S.stages[sec]=S.stages[sec]||{};const was=!!S.stages[sec][key];S.stages[sec][key]=true;return !was;}
 function unlocked(sec){
   if(!S.settings.lock||sec===1)return true;
   if(sec===5)return [1,2,3,4].every(k=>passed(k,6));
@@ -114,7 +123,7 @@ function levelBarHTML(){
 function secCardHTML(s){
   const lock=!unlocked(s.id);
   const pips=secPoems(s.id).length===10?secPoems(s.id).map(n=>'<i style="background:var(--lv'+pget(n).lv+')"></i>').join(''):'';
-  const badges=MODES.map(m=>'<b class="'+(passed(s.id,m.stage)?'on':'')+'">'+STAGE_KANJI[m.stage]+'</b>').join('');
+  const badges=[1,2,3,4,5,6].map(st=>'<b class="'+(passed(s.id,st)?'on':'')+'">'+STAGE_KANJI[st]+'</b>').join('');
   return '<button class="card sec'+(lock?' locked':'')+'" data-sec="'+s.id+'"'+(lock?' aria-disabled="true"':'')+'>'+
     '<div><div class="nm">'+s.name+'</div><div class="small muted">'+(lock?lockReason(s.id):s.range)+'</div></div>'+
     '<div class="stagebadges" aria-label="合格した段階">'+(lock?'<span class="small muted">未解放</span>':badges)+'</div>'+
@@ -144,9 +153,10 @@ function vModes(sec){
   const s=SECTIONS[sec-1];G=null;
   app.innerHTML='<div class="stack"><div class="row"><button class="btn ghost" id="back">‹ 戻る</button></div>'+
    '<div><div class="eyebrow">'+s.range+'</div><h1>'+s.name+'</h1></div>'+
-   MODES.map(m=>{const best=S.best[m.id+':'+sec];const extra=m.id==='chain'&&S.chainBest[sec]?'最長 '+S.chainBest[sec]+'首':'';
-     return '<button class="card mode'+(passed(sec,m.stage)?' passed':'')+'" data-mode="'+m.id+'"><span class="num">'+STAGE_KANJI[m.stage]+'</span><span class="nm">'+m.name+'</span><span class="best">'+(best!=null?'最高 '+best+'点':'')+(extra?'<br>'+extra:'')+'</span><span class="small muted">'+m.desc+'<br>合格：'+m.pass+(passed(sec,m.stage)?'（合格済み）':'')+'</span></button>';}).join('')+
-   '<p class="small muted">段階三（穴埋め）は第2版で追加します。</p></div>';
+   [1,2,3,4,5,6].map(st=>'<div class="eyebrow" style="margin-top:4px">段階'+STAGE_KANJI[st]+'　'+STAGE_NAME[st]+(passed(sec,st)?'　（合格）':'')+'</div>'+
+     MODES.filter(m=>m.stage===st).map(m=>{const best=S.best[m.id+':'+sec];const extra=m.id==='chain'&&S.chainBest[sec]?'最長 '+S.chainBest[sec]+'首':'';
+     return '<button class="card mode'+(modePassed(sec,m)?' passed':'')+'" data-mode="'+m.id+'"><span class="num">'+STAGE_KANJI[m.stage]+'</span><span class="nm">'+m.name+'</span><span class="best">'+(best!=null?'最高 '+best+'点':'')+(extra?'<br>'+extra:'')+'</span><span class="small muted">'+m.desc+'<br>合格：'+m.pass+(modePassed(sec,m)?'（合格済み）':'')+'</span></button>';}).join('')).join('')+
+   (sec<5?'':'')+'</div>';
   document.getElementById('back').addEventListener('click',()=>go('study'));
   app.querySelectorAll('[data-mode]').forEach(b=>b.addEventListener('click',()=>startGame(b.dataset.mode,sec)));
 }
@@ -178,21 +188,21 @@ function finish(summary){
   S.history.unshift({date:today(),mode,sec:review?0:sec,score:G.score});S.history=S.history.slice(0,100);
   let newBest=false;
   if(mode!=='view'&&!review){const k=mode+':'+sec;if(S.best[k]==null||G.score>S.best[k]){newBest=S.best[k]!=null||G.score>0;S.best[k]=G.score;}}
-  let stageNew=false;
-  if(summary.pass&&!review){stageNew=setPassed(sec,MODES.find(m=>m.id===mode).stage);}
+  let stageNew=false,stageDone=false;
+  if(summary.pass&&!review){const md=MODES.find(m=>m.id===mode);const before=passed(sec,md.stage);stageNew=setPassed(sec,md.key);stageDone=!before&&passed(sec,md.stage);}
   const titles=checkTitles();
   save();
-  const res=Object.assign({mode,sec,review,score:G.score,maxCombo:G.maxCombo,newBest,stageNew,titles},summary);
+  const res=Object.assign({mode,sec,review,score:G.score,maxCombo:G.maxCombo,newBest,stageNew,stageDone,titles},summary);
   G=null;go('result',res);
   if(summary.pass||titles.length)sClear();
 }
 function vResult(r){
   const m=MODES.find(x=>x.id===r.mode);
-  const unlockedNext=r.stageNew&&m.stage===4&&r.sec<4&&S.settings.lock;
+  const unlockedNext=r.stageNew&&m.key===4&&r.sec<4&&S.settings.lock;
   app.innerHTML='<div class="stack"><div class="eyebrow">'+(r.review?'今日の復習':SECTIONS[r.sec-1].name+'・'+m.name)+'</div><h1>結果</h1>'+
    (r.mode==='view'?'':'<div class="card result-big"><b>'+r.score+'</b> 点'+(r.newBest?'<div class="newtitle">自己ベスト更新</div>':'')+'<div class="small muted">最大 '+r.maxCombo+' 連続正解</div></div>')+
    '<div class="card stack" style="gap:6px">'+r.lines.map(l=>'<div>'+l+'</div>').join('')+
-     (r.review?'':(r.pass?'<div><span class="stamp">合格</span> '+(r.stageNew?'段階'+STAGE_KANJI[m.stage]+'に合格しました。':'（合格済み）')+'</div>':(r.mode==='view'?'':'<div class="small muted">合格条件：'+m.pass+'</div>')))+
+     (r.review?'':(r.pass?'<div><span class="stamp">合格</span> '+(r.stageNew?'「'+m.name+'」に合格しました。':'（合格済み）')+(r.stageDone?'<div class="newtitle">段階'+STAGE_KANJI[m.stage]+'「'+STAGE_NAME[m.stage]+'」を修了しました</div>':(m.stage===6&&!passed(r.sec,6)?'<div class="small muted">段階六の修了には、通し暗唱と抜き打ちの両方の合格が必要です。</div>':''))+'</div>':(r.mode==='view'?'':'<div class="small muted">合格条件：'+m.pass+'</div>')))+
      (unlockedNext?'<div class="newtitle">'+SECTIONS[r.sec].name+'が解放されました</div>':'')+'</div>'+
    (r.titles.length?'<div class="card">'+r.titles.map(t=>'<div class="newtitle">称号「'+t.name+'」を得ました</div><div class="small muted">'+t.from+'より。'+t.cond+'</div>').join('')+'</div>':'')+
    (r.weak&&r.weak.length?'<div class="card"><h3>見直したい首</h3>'+r.weak.map(n=>'<div class="small">第'+num(n)+'首　'+esc(POEMS[n-1].kami)+'</div>').join('')+'</div>':'')+
@@ -352,6 +362,165 @@ PLAY.chain={
     const reached=G.log.length;
     S.chainBest[G.sec]=Math.max(S.chainBest[G.sec]||0,G.bestRun);
     finish({pass:completed&&G.totalMiss===0,lines:[completed?'最後の首まで組み終えました。':'ミスが3回になり、'+(G.queue[G.i]?POEMS[G.queue[G.i]-1].label+'で':'')+'終了しました。','組めた首 '+reached+' / '+G.queue.length+'、ノーミスでの最長 '+G.bestRun+'首'],weak:G.log.filter(x=>!x.ok).map(x=>x.n).concat(completed?[]:[G.queue[G.i]]).filter(Boolean)});
+  }
+};
+
+/* 4択モードの共通処理（番号当て・次の首当て） */
+function choiceMode(cfg){return {
+  init(){G.pool=secPoems(G.sec);G.queue=cfg.queue();G.correct=0;this.makeQ();},
+  makeQ(){const q=G.queue[G.i];G.opts=shuffle([cfg.answer(q)].concat(cfg.wrong(q)));G.answered=null;G.t0=Date.now();},
+  render(){
+    const q=G.queue[G.i],ans=cfg.answer(q);
+    app.innerHTML=playbarHTML(G.i,G.queue.length)+cfg.prompt(q)+
+     '<div class="opts'+(cfg.grid&&cfg.grid(q)?' grid2':'')+'">'+G.opts.map(o=>{let cls='';if(G.answered!=null){if(o===ans)cls=' good';else if(o===G.answered)cls=' bad';}
+       return '<button class="opt'+cls+'" data-o="'+o+'"'+(G.answered!=null?' disabled':'')+'>'+cfg.optHTML(q,o)+'</button>';}).join('')+'</div>'+
+     (G.answered!=null&&G.answered!==ans?'<div class="bottom-actions"><button class="btn primary block" id="nx">次へ</button></div>':'');
+    bindQuit();
+    app.querySelectorAll('[data-o]').forEach(b=>b.addEventListener('click',()=>this.answer(+b.dataset.o)));
+    const nx=document.getElementById('nx');if(nx)nx.onclick=()=>this.advance();
+  },
+  answer(o){
+    if(G.answered!=null)return;
+    const q=G.queue[G.i],ok=o===cfg.answer(q);G.answered=o;
+    if(ok){G.correct++;addScore(10,Date.now()-G.t0);sGood();}else{breakCombo();sBad();}
+    cfg.after(q,ok);G.log.push({n:cfg.weakN(q),ok});save();render();
+    if(ok)setTimeout(()=>this.advance(),800);
+  },
+  advance(){
+    if(!G||G.mode!==cfg.id)return;
+    G.i++;
+    if(G.i>=G.queue.length){const rate=G.correct/G.queue.length;
+      finish({pass:rate>=0.9,lines:['正解 '+G.correct+' / '+G.queue.length+'（正答率 '+Math.round(rate*100)+'%）'],weak:G.log.filter(x=>!x.ok).map(x=>x.n)});return;}
+    this.makeQ();render();
+  }
+};}
+function fillWrong(correct,pool,count,exclude){
+  const others=shuffle(pool.filter(m=>m!==correct&&!(exclude||[]).includes(m)));
+  return others.slice(0,count);
+}
+
+/* 番号当て：歌→番号、番号→上の句 を半々で出す */
+PLAY.number=choiceMode({
+  id:'number',
+  queue:()=>shuffle(G.pool).slice(0,G.sec===5?20:10).map(n=>({n,dir:Math.random()<0.5?'p2n':'n2p'})),
+  answer:q=>q.n,
+  wrong:q=>{
+    if(q.dir==='p2n'){const near=shuffle(G.pool.filter(m=>m!==q.n&&Math.abs(m-q.n)<=3)).slice(0,2);return near.concat(fillWrong(q.n,G.pool,3,near)).slice(0,3);}
+    const sim=shuffle(similarPoems(q.n,G.pool)).slice(0,2);return sim.concat(fillWrong(q.n,G.pool,3,sim)).slice(0,3);
+  },
+  grid:q=>q.dir==='p2n',
+  prompt:q=>{const p=POEMS[q.n-1];
+    return q.dir==='p2n'
+      ?'<div class="card"><div class="label small">この歌は第何首？</div>'+poemHTML(p,{vertical:false})+'</div><p class="small muted">番号を選んでください</p>'
+      :'<div class="card" style="text-align:center;padding:20px 16px"><div class="label" style="font-size:1.7rem">'+p.label+'</div></div><p class="small muted">この首の上の句を選んでください</p>';},
+  optHTML:(q,o)=>q.dir==='p2n'?'<span class="label">'+POEMS[o-1].label+'</span>':kuHTML(POEMS[o-1].kamiChunks),
+  after:(q,ok)=>grade(q.n,ok?'ok':'ng',3),
+  weakN:q=>q.n
+});
+
+/* 次の首当て：第n首を見て、第n+1首の上の句を選ぶ */
+PLAY.next=choiceMode({
+  id:'next',
+  queue:()=>shuffle(G.pool.filter(n=>G.pool.includes(n+1))).slice(0,G.sec===5?20:10),
+  answer:n=>n+1,
+  wrong:n=>{const sim=shuffle(similarPoems(n+1,G.pool).filter(m=>m!==n)).slice(0,2);return sim.concat(fillWrong(n+1,G.pool,3,sim.concat([n]))).slice(0,3);},
+  prompt:n=>{const p=POEMS[n-1];
+    return '<div class="card"><div class="label small">'+p.label+'</div>'+poemHTML(p,{vertical:false})+'</div><p class="small muted">次の首（'+POEMS[n].label+'）の上の句を選んでください</p>';},
+  optHTML:(n,o)=>kuHTML(POEMS[o-1].kamiChunks),
+  after:(n,ok)=>{const key=String(n);const j=S.joints[key]||{ok:0,ng:0};ok?j.ok++:j.ng++;S.joints[key]=j;grade(n+1,ok?'ok':'ng',3);},
+  weakN:n=>n+1
+});
+
+/* 穴埋め：伏せた文節を前から順に選んで埋める */
+const FILL_LEVELS=[['one','1か所','各首の文節を1つだけ伏せます'],['half','半分','文節の半分を伏せます'],['all','全部','すべての文節を伏せます。段階三の合格判定はこの伏せ方で行います']];
+PLAY.fill={
+  init(opt){G.level=opt.level||null;if(G.level)this.setup();},
+  setup(){G.pool=secPoems(G.sec);G.queue=shuffle(G.pool).slice(0,10);G.clean=0;G.i=0;this.nextPoem();},
+  nextPoem(){
+    const n=G.queue[G.i],p=POEMS[n-1],all=p.kamiChunks.concat(p.shimoChunks),idx=all.map((c,i)=>i);
+    const blanks=(G.level==='one'?shuffle(idx).slice(0,1):G.level==='half'?shuffle(idx).slice(0,Math.ceil(all.length/2)):idx).sort((a,b)=>a-b);
+    G.F={n,all,kamiLen:p.kamiChunks.length,blanks,bi:0,filled:{},wrongAt:{},miss:0};G.t0=Date.now();this.makeOpts();
+  },
+  makeOpts(){
+    const F=G.F,target=F.all[F.blanks[F.bi]],own=new Set(F.all.map(plain));
+    const cand=[];
+    for(const m of shuffle(G.pool)){if(m===F.n)continue;for(const c of POEMS[m-1].kamiChunks.concat(POEMS[m-1].shimoChunks)){if(!own.has(plain(c))&&!cand.some(x=>plain(x)===plain(c)))cand.push(c);}}
+    const len=plain(target).length;
+    cand.sort((a,b)=>Math.abs(plain(a).length-len)-Math.abs(plain(b).length-len));
+    let wrong=shuffle(cand.slice(0,8)).slice(0,3);
+    // まだ埋めていない自分の文節を1つ混ぜ、順番も問う
+    const rest=F.blanks.slice(F.bi+1).map(i=>F.all[i]).filter(c=>plain(c)!==plain(target));
+    if(rest.length)wrong=[shuffle(rest)[0]].concat(wrong).slice(0,3);
+    F.opts=shuffle([target].concat(wrong));
+  },
+  render(){
+    if(!G.level){
+      app.innerHTML='<div class="playbar"><button class="x" id="quit" aria-label="やめる">×</button><div class="meta"><b>穴埋め</b><div>'+secLabel()+'</div></div></div>'+
+       '<div class="stack"><p style="margin:0">伏せる量を選んでください</p>'+FILL_LEVELS.map(l=>'<button class="card mode" data-lv="'+l[0]+'" style="grid-template-columns:1fr"><span class="nm">'+l[1]+'</span><span class="small muted">'+l[2]+'</span></button>').join('')+'</div>';
+      bindQuit();
+      app.querySelectorAll('[data-lv]').forEach(b=>b.addEventListener('click',()=>{G.level=b.dataset.lv;this.setup();render();}));
+      return;
+    }
+    const F=G.F,cur=F.bi<F.blanks.length?F.blanks[F.bi]:-1;
+    let built='';
+    F.all.forEach((c,i)=>{
+      if(i===F.kamiLen)built+='<span class="br"></span>　';
+      const isBlank=F.blanks.includes(i);
+      if(!isBlank||F.filled[i])built+='<span class="'+(F.wrongAt[i]?'fixed':'done')+'">'+chunkHTML(c)+'</span>';
+      else built+='<span class="blank'+(i===cur?' cur':'')+'">'+(i===cur?'？':'　　')+'</span>';
+    });
+    app.innerHTML=playbarHTML(G.i,G.queue.length)+
+     '<div class="row between"><span class="label">'+POEMS[F.n-1].label+'</span><span class="small muted">伏せ方：'+FILL_LEVELS.find(l=>l[0]===G.level)[1]+'</span></div>'+
+     '<div class="built">'+built+'</div>'+
+     (cur>=0?'<p class="small muted">「？」に入る文節を選んでください</p><div class="opts">'+F.opts.map((c,k)=>'<button class="opt" data-k="'+k+'">'+chunkHTML(c)+'</button>').join('')+'</div>':'');
+    bindQuit();
+    app.querySelectorAll('[data-k]').forEach(b=>b.addEventListener('click',()=>this.answer(+b.dataset.k)));
+  },
+  answer(k){
+    const F=G.F;if(F.bi>=F.blanks.length)return;
+    const i=F.blanks[F.bi],target=F.all[i];
+    if(plain(F.opts[k])===plain(target)){sGood();}
+    else{F.miss++;F.wrongAt[i]=true;breakCombo();sBad();toast('正しくは「'+plain(target)+'」');}
+    F.filled[i]=true;F.bi++;
+    if(F.bi<F.blanks.length){this.makeOpts();render();return;}
+    const clean=F.miss===0;
+    if(clean){G.clean++;addScore(10,Date.now()-G.t0);}
+    grade(F.n,clean?'ok':'ng',3);G.log.push({n:F.n,ok:clean});save();render();
+    setTimeout(()=>{if(!G||G.mode!=='fill')return;G.i++;
+      if(G.i>=G.queue.length){const rate=G.clean/G.queue.length;
+        finish({pass:G.level==='all'&&rate>=0.9,lines:['伏せ方：'+FILL_LEVELS.find(l=>l[0]===G.level)[1],'ミスなく埋めた首 '+G.clean+' / '+G.queue.length+'（'+Math.round(rate*100)+'%）'].concat(G.level==='all'?[]:['段階三の合格判定は「全部」で行います。']),weak:G.log.filter(x=>!x.ok).map(x=>x.n)});return;}
+      this.nextPoem();render();},clean?700:1400);
+  }
+};
+
+/* 通し暗唱：番号だけを見て暗唱し、上の句→全文の順に答えを開く */
+PLAY.recite={
+  init(){G.queue=secPoems(G.sec);G.step=0;G.results={ok:0,keep:0,ng:0};},
+  render(){
+    const n=G.queue[G.i],p=POEMS[n-1];
+    const body=G.step===0
+      ?'<div class="card" style="text-align:center;padding:32px 16px"><div class="label" style="font-size:1.9rem">'+p.label+'</div><p class="small muted" style="margin:10px 0 0">頭の中で、この首を通して暗唱してください</p></div>'
+      :'<div class="card"><div class="row between"><span class="label small">'+p.label+'</span><span class="small muted">'+(G.step===1?'上の句':'全文')+'</span></div>'+poemHTML(p,{noShimo:G.step===1})+'</div>';
+    const acts=G.step===0
+      ?'<div class="row" style="gap:10px"><button class="btn" id="s1" style="flex:1">上の句を見る</button><button class="btn primary" id="s2" style="flex:1">全文を見る</button></div>'
+      :G.step===1
+      ?'<button class="btn primary block" id="s2">全文を見る</button>'
+      :'<div class="grade"><button class="btn ok" data-g="ok"><b>言えた</b></button><button class="btn mid" data-g="keep"><b>一部間違えた</b></button><button class="btn ng" data-g="ng"><b>言えなかった</b></button></div>';
+    app.innerHTML=playbarHTML(G.i,G.queue.length)+body+'<div class="bottom-actions">'+acts+'</div>';
+    bindQuit();
+    const s1=document.getElementById('s1'),s2=document.getElementById('s2');
+    if(s1)s1.onclick=()=>{G.step=1;render();};
+    if(s2)s2.onclick=()=>{G.step=2;render();};
+    app.querySelectorAll('[data-g]').forEach(b=>b.addEventListener('click',()=>this.answer(b.dataset.g)));
+  },
+  answer(g){
+    const n=G.queue[G.i];G.results[g]++;
+    if(g==='ok'){addScore(10,null);sGood();}else if(g==='keep'){breakCombo();G.score+=5;}else{breakCombo();sBad();}
+    grade(n,g,5);G.log.push({n,ok:g==='ok'});save();
+    G.i++;G.step=0;
+    if(G.i>=G.queue.length){const r=G.results;
+      finish({pass:r.keep===0&&r.ng===0,lines:['言えた '+r.ok+'　一部間違えた '+r.keep+'　言えなかった '+r.ng],weak:G.log.filter(x=>!x.ok).map(x=>x.n)});return;}
+    render();
   }
 };
 
