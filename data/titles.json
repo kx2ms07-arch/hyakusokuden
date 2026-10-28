@@ -1,5 +1,5 @@
 {
- "note": "称号の名前・由来・条件文・判定ルール。rule.type: played / countLv / passed / streak / chainRun",
+ "note": "称号の名前・由来・条件文・判定ルール。rule.type: played / countLv / passed（[巻, 段階]。段階6は通し暗唱と抜き打ちの両方）/ streak / chainRun",
  "titles": [
   {
    "id": "t1",
@@ -116,14 +116,10 @@
    "id": "t10",
    "name": "もとの初心",
    "from": "第四十首",
-   "cond": "通しの連鎖と抜き打ちを、それぞれノーミスで達成",
+   "cond": "40首の通し暗唱と、40首全体からの抜き打ちを、それぞれノーミスで達成",
    "rule": {
     "type": "passed",
     "all": [
-     [
-      5,
-      5
-     ],
      [
       5,
       6
